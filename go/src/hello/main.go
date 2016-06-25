@@ -3,8 +3,11 @@ package main
 
 import (
 	"fmt"
+	"strings"
 )
 
 func main() {
-	fmt.Println("Hello World!")
+	//	name := "Hello World!"
+	//str := "laoYu老虞,laoban"
+	fmt.Println(strings.EqualFold("Go", "go"))
 }
