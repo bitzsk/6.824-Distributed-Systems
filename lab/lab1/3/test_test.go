@@ -193,7 +193,7 @@ func TestOneFailure(t *testing.T) {
 
 func TestManyFailures(t *testing.T) {
 	mr := setup()
-	i := 0
+	i := 20
 	done := false
 	for !done {
 		select {
@@ -203,10 +203,10 @@ func TestManyFailures(t *testing.T) {
 			break
 		default:
 			// Start 2 workers each sec. The workers fail after 10 tasks
-			w := port(10)
+			w := port(i)
 			go RunWorker(mr.address, w, MapFunc, ReduceFunc, 10)
 			i++
-			w = port(11)
+			w = port(i)
 			go RunWorker(mr.address, w, MapFunc, ReduceFunc, 10)
 			i++
 			time.Sleep(1 * time.Second)
