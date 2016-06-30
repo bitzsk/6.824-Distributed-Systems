@@ -66,7 +66,7 @@ $ export "GOPATH=$PWD"  # go needs $GOPATH to be set to the project's working di
 $ cd "$GOPATH/src/mapreduce"
 $ setup ggo_v1.5
 $ go test -run Sequential mapreduce/... 
-ok  	mapreduce	2.694s
+ok      mapreduce   2.694s
 ```
 
     如果你的程序通过了所有的Sequential用例，可以获得满分。
@@ -156,16 +156,83 @@ $ go test -run TestBasic mapreduce/...
     * 并行时最简单的调试方法是在程序中插入debug()语句，并执行`go test -run TestBasic mapreduce/... > out`将输出打印至out文件中。
 
 ###任务四：处理worker异常
+本任务中，你需要帮助master对发生故障的worker进行处理。MapReduce的异常处理相对简单，这是因为worker不需要保存状态。如果worker节点崩溃，任何从master到worker的RPC都会失败。master应该将失败的任务发给其他worker。
+一次RPC失败并不意味着worke挂掉了；worker可能只是暂时未能通信，但仍在计算。因此，可能有这种状况发生：两个worker接受到了相同的任务并计算之。不管怎样，由于任务时幂等的（任意多次执行所产生的影响均与一次执行的影响相同），一个任务计算两次的情况不需要进行处理。（我们的测试用例不会在任务处理过程中失败，所以你不用担心多个worker写入相同的输出文件）
 
-###任务五：生成倒排索引（可选）
+    注意：我们假设master不会发生故障，所以你不需要处理master的故障。master的错误容忍机制要比worker更困难，因为master保存了很多状态，如果发生故障，需要顺序恢复。很多实验室都致力于这项挑战。
+    
+你的程序必须通过test_test.go中两个剩下的测试用例。第一个用例测试一个worker发生故障；第二个用例测试多个worker发生故障时的处理。测试用例会定期启动新worker，master为其分配任务，但是这些worker处理任务一会就会发生故障。输入下列命令可以运行用例：
+```
+$ go test -run Failure mapreduce/...
+```
 
+###任务五：生成反向索引（可选）
+
+统计单词是一个经典的Map/Reduce应用，但是使用这个Map/Reduce应用的用户不多。我们很少会在一个真实的大数据集合中统计单词。这个任务中，我们将会创建Map和Reduce函数，用来生成反向索引。
+
+反向索引在计算机科学中应用十分广泛，对于文档搜索来说特别有用。宽泛的说，反向索引是一个关于基础数据的map，指向数据初始的位置。例如：在上下文搜索中，map保存的内容是keyword与包含这些单词的文档的映射。
+
+我们已经创建了`main/ii.go`，非常类似之前创建的`wc.go`。你需要修改`main/ii.go`中的`mapF`和`reduceF`，用来生成反向索引。运行`ii.go`应该会输出元数组，每行一个，格式如下：
+
+```
+$ go run ii.go master sequential pg-*.txt
+$ head -n5 mrtmp.iiseq
+A: 16 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+ABC: 2 pg-les_miserables.txt,pg-war_and_peace.txt
+ABOUT: 2 pg-moby_dick.txt,pg-tom_sawyer.txt
+ABRAHAM: 1 pg-dracula.txt
+ABSOLUTE: 1 pg-les_miserables.txt
+```
+如果还不清楚上面的list，格式是：
+
+```
+word: #documents documents,sorted,and,separated,by,commas
+```
+要想通过这项任务，你需要运行`test-ii.sh`:
+
+```
+$ sort -k1,1 mrtmp.iiseq | sort -snk2,2 mrtmp.iiseq | grep -v '16' | tail -10
+women: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+won: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+wonderful: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+words: 15 pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+worked: 15 pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+worse: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+wounded: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+yes: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-metamorphosis.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+younger: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+yours: 15 pg-being_ernest.txt,pg-dorian_gray.txt,pg-dracula.txt,pg-emma.txt,pg-frankenstein.txt,pg-great_expectations.txt,pg-grimm.txt,pg-huckleberry_finn.txt,pg-les_miserables.txt,pg-moby_dick.txt,pg-sherlock_holmes.txt,pg-tale_of_two_cities.txt,pg-tom_sawyer.txt,pg-ulysses.txt,pg-war_and_peace.txt
+```
 
 ###运行所有用例
 
-###提交程序
+你可以通过运行脚本`src/main/test-mr.sh`执行所有测试用例。若程序正确，输出如下：
+```
+$ sh ./test-mr.sh
+==> Part I
+ok      mapreduce   3.053s
+
+==> Part II
+Passed test
+
+==> Part III
+ok      mapreduce   1.851s
+
+==> Part IV
+ok      mapreduce   10.650s
+
+==> Part V (challenge)
+Passed test
+```
 
 
 
 
+**注意事项**
 
+若需要在在windows下运行，需要进行如下修改：
+    
+    *   由于不支持unix domain，可以使用tcp。修改test_test.go中port即测试用例使用的相关代码，返回"localhost:8888"类似的地址
+    *   将net.Listen("unix", me)修改为修改net.Listen("tcp", me)
+    *   可以对const nNumber  10000nMap nReduce 进行修改，加快测试速度。
 
