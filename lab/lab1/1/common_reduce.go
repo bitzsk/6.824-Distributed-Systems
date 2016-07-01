@@ -33,23 +33,22 @@ func doReduce(
 	for i :=0;i<nMap;i++ {
 		mergeFile :=reduceName(jobName, i, reduceTaskNumber);
 		//读取这个文件内容，再decode下
-		fmt.Printf("mergeFile: %s\n",mergeFile);
+		// fmt.Printf("mergeFile: %s\n",mergeFile);
 		infile, _ := os.Open(mergeFile)	
 		dec := json.NewDecoder(infile)
 
 		var v KeyValue
 		
 		err :=dec.Decode(&v); 
-		fmt.Printf("Decode: %s %s\n",v.Key,err==nil);
+		// fmt.Printf("Decode: %s %s\n",v.Key,err==nil);
 		for err==nil{
 			//fmt.Printf("Decode: %s %s\n",v.Key,err);
 
-			val,ok :=maps[v.Key]
+			_,ok :=maps[v.Key]
 			if !ok{//未找到
-				val=make([]string,1000)
-				maps[v.Key]=val
+				maps[v.Key]=make([]string,0,1000)
 			}
-			val=append(val,v.Value)
+			maps[v.Key]=append(maps[v.Key],v.Value)
 			//继续decode
 			err =dec.Decode(&v); 
 		}

@@ -23,7 +23,7 @@ func doMap(
 	fmt.Printf("doMap:%s %d %s %d\n",jobName,mapTaskNumber,inFile,nReduce);
 	file, err := os.Open(inFile)
 	if err != nil {
-		fmt.Printf("open file " + inFile + " failed!")
+		// fmt.Printf("open file " + inFile + " failed!")
 		return
 	}
 	defer file.Close()
@@ -57,7 +57,7 @@ func doMap(
 	
 	// fmt.Printf("%s\n",ret);
 	kv :=mapF(inFile,ret)
-	fmt.Printf("%s %d\n","after mapF ",len(kv));
+	// fmt.Printf("%s %d\n","after mapF ",len(kv));
 
 	var kValues=make([][]KeyValue,nReduce);
 
@@ -111,7 +111,7 @@ func doMap(
 	for i :=0;i<nReduce ;i++{
 		
 		fname :=reduceName(jobName,mapTaskNumber,i)
-		fmt.Printf("fname: %s\n",fname)
+		// fmt.Printf("fname: %s\n",fname)
 		outfile ,_:= os.Create(fname);
 
 		defer outfile.Close();
